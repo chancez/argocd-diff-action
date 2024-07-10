@@ -36,7 +36,9 @@ export class ArgoCDServer {
   async command(params: string): Promise<ExecResult> {
     let cmd = `${this.binaryPath} ${params} --auth-token=${this.token} --server=${this.fqdn} ${this.extraCommandArgs}`;
     core.debug(`Running: ${scrubSecrets(cmd)}`);
-    return execCommand(cmd);
+    return execCommand(cmd, {
+      maxBuffer: 5*1024*1024,
+    });
   }
 
   async getAppLocalDiff(app: App): Promise<Diff> {

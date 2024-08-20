@@ -6,6 +6,9 @@ import { AppTargetRevision } from './argocd/AppTargetRevision';
 import { ArgoCDServer } from './argocd/ArgoCDServer';
 import { Diff } from './Diff';
 import { scrubSecrets } from './lib';
+import { truncateDiffOutput } from './lib';
+import { truncateOutputArray } from './lib';
+
 
 const ARCH = process.env.ARCH || 'linux';
 const githubToken = core.getInput('github-token');
@@ -25,14 +28,16 @@ async function postDiffComment(diffs: Diff[]): Promise<void> {
   const commitLink = `https://github.com/${owner}/${repo}/pull/${github.context.issue.number}/commits/${sha}`;
   const shortCommitSha = String(sha).substring(0, 7);
 
+  // OPTION 1.
+  //const trimmedDiff = truncateDiffOutput(diffs)
+
   const diffOutput = diffs.map(
     ({ app, diff, error }) => `
 App: [\`${app.metadata.name}\`](https://${ARGOCD_SERVER_FQDN}/applications/${app.metadata.name})
 YAML generation: ${error ? ' Error 🛑' : 'Success 🟢'}
 App sync status: ${app.status.sync.status === 'Synced' ? 'Synced ✅' : 'Out of Sync ⚠️ '}
-${
-  error
-    ? `
+${error
+        ? `
 **\`stderr:\`**
 \`\`\`
 ${error.stderr}
@@ -43,12 +48,11 @@ ${error.stderr}
 ${JSON.stringify(error.err)}
 \`\`\`
 `
-    : ''
-}
+        : ''
+      }
 
-${
-  diff
-    ? `
+${diff
+        ? `
 <details>
 
 \`\`\`diff
@@ -57,11 +61,14 @@ ${diff}
 
 </details>
 `
-    : ''
-}
+        : ''
+      }
 ---
 `
   );
+
+  // OPTION 2.
+  //  const trimmedDiffOutput = truncateOutputArray(diffOutput);
 
   // Use a unique value at the beginning of each comment so we can find the correct comment for the argocd server FQDN
   const headerPrefix = `<!-- argocd-diff-action ${ARGOCD_SERVER_FQDN} -->`;
